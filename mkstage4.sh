@@ -17,7 +17,7 @@ COMPRESS_TYPES=(
 	["lz4"]="lz4"
 	["lzo"]="lzop"
 	["xz"]="xz pixz"
-	["zst"]="zstd"
+	["zst"]="zstd pzstd"
 	)
 declare -A COMPRESS_AVAILABLE
 for ext in "${!COMPRESS_TYPES[@]}"; do
