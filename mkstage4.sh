@@ -299,3 +299,5 @@ then
 		tar "${TAR_OPTIONS[@]}" -f "$STAGE4_FILENAME.kmod" "${TARGET}lib"*"/modules/$(uname -r)"
 	fi
 fi
+
+echo test
