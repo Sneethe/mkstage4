@@ -38,7 +38,9 @@ USER_EXCL=()
 USER_INCL=()
 S_KERNEL=0
 HAS_PORTAGEQ=0
-COMPRESS_TYPE="bz2"
+COMPRESS_TYPE="zst"
+# Assumed ratio for zstd
+COMP_RATIO="4.4"
 
 if command -v portageq &>/dev/null
 then
@@ -255,16 +257,19 @@ TAR_OPTIONS=(
 	--ignore-failed-read
 	"--xattrs-include=*.*"
 	--numeric-owner
-	"--checkpoint=.500"
 	"--use-compress-prog=${COMP_OPTIONS[*]}"
 	)
+ 
+# Get $TARGET size for pv eta
+  TOTAL_SIZE="$(du -hs --apparent-size --block-size=1G "${EXCLUDES[@]}" "$TARGET" 2> /dev/null |  awk '{print $1}')"
+  COMP_SIZE="$(awk "BEGIN {printf \"%.2f\",${TOTAL_SIZE}/${COMP_RATIO}}" | awk '{print int($1+0.5)}')"
 
 # if not in quiet mode, this message will be displayed:
 if [[ "$AGREE" != 'yes' ]]
 then
 	echo "Are you sure that you want to make a stage 4 tarball of the system"
 	echo "located under the following directory?"
-	echo "$TARGET"
+        printf "%b" "\e[5m\e[31m"$TARGET" \e[0m" "--- at a total size of = "$TOTAL_SIZE"GB"
 	echo
 	echo "WARNING: since all data is saved by default the user should exclude all"
 	echo "security- or privacy-related files and directories, which are not"
@@ -287,7 +292,7 @@ fi
 # start stage4 creation:
 if [ "$AGREE" == 'yes' ]
 then
-	tar "${TAR_OPTIONS[@]}" "${INCLUDES[@]}" "${EXCLUDES[@]}" "${OPTIONS[@]}" -f "$STAGE4_FILENAME" "${TARGET}"
+	tar "${TAR_OPTIONS[@]}" "${INCLUDES[@]}" "${EXCLUDES[@]}" "${OPTIONS[@]}" "${TARGET}" | pv -abept -s "$COMP_SIZE"G > "$STAGE4_FILENAME"
 	if ((S_KERNEL))
 	then
 		tar "${TAR_OPTIONS[@]}" -f "$STAGE4_FILENAME.ksrc" "${TARGET}usr/src/linux-$(uname -r)"
